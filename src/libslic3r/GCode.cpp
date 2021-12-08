@@ -3185,7 +3185,9 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
     }
 
     // check whether a straight travel move would need retraction
-    bool needs_retraction             = this->needs_retraction(travel, role);
+    bool needs_retraction;
+    bool needs_lift_z;
+    std::tie(needs_retraction, needs_lift_z) = this->needs_retraction(travel, role);
     // check whether wipe could be disabled without causing visible stringing
     bool could_be_wipe_disabled       = false;
     // Save state of use_external_mp_once for the case that will be needed to call twice m_avoid_crossing_perimeters.travel_to.
@@ -3198,7 +3200,7 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
         && ! m_avoid_crossing_perimeters.disabled_once()) {
         travel = m_avoid_crossing_perimeters.travel_to(*this, point, &could_be_wipe_disabled);
         // check again whether the new travel path still needs a retraction
-        needs_retraction = this->needs_retraction(travel, role);
+        std::tie(needs_retraction, needs_lift_z) = this->needs_retraction(travel, role);
         //if (needs_retraction && m_layer_index > 1) exit(0);
     }
 
@@ -3212,7 +3214,7 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
             m_wipe.reset_path();
 
         Point last_post_before_retract = this->last_pos();
-        gcode += this->retract();
+        gcode += this->retract(false, needs_lift_z);
         // When "Wipe while retracting" is enabled, then extruder moves to another position, and travel from this position can cross perimeters.
         // Because of it, it is necessary to call avoid crossing perimeters again with new starting point after calling retraction()
         // FIXME Lukas H.: Try to predict if this second calling of avoid crossing perimeters will be needed or not. It could save computations.
@@ -3248,11 +3250,14 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
     return gcode;
 }
 
-bool GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
+std::pair<bool, bool> GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
 {
+    /*  Returns two boolean values. The first indicated whether a retraction is
+        needed while the second while lifting the extruder is needed */
+
     if (travel.length() < scale_(EXTRUDER_CONFIG(retract_before_travel))) {
         // skip retraction if the move is shorter than the configured threshold
-        return false;
+        return std::make_pair(false, false);
     }
 
     if (role == ExtrusionRole::SupportMaterial)
@@ -3270,24 +3275,38 @@ bool GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
                         // skip retraction if this is a travel move inside a support material island
                         //FIXME not retracting over a long path may cause oozing, which in turn may result in missing material
                         // at the end of the extrusion path!
-                        return false;
+                        return std::make_pair(false, false);
                     // Not sure whether updating the boudning box isn't too expensive.
                     //bbox_travel = get_extents(trimmed);
                 }
         }
 
+    // Check perimeter crossing
     if (m_config.only_retract_when_crossing_perimeters && m_layer != nullptr &&
         m_config.fill_density.value > 0 && m_retract_when_crossing_perimeters.travel_inside_internal_regions(*m_layer, travel))
-        // Skip retraction if travel is contained in an internal slice *and*
-        // internal infill is enabled (so that stringing is entirely not visible).
-        //FIXME any_internal_region_slice_contains() is potentionally very slow, it shall test for the bounding boxes first.
-        return false;
+    {
+        perimeter_cross = false;
+    }
 
-    // retract if only_retract_when_crossing_perimeters is disabled or doesn't apply
-    return true;
+    // Skip retraction if travel is contained in an internal slice *and*
+    // internal infill is enabled (so that stringing is entirely not visible).
+    if (m_config.only_retract_when_crossing_perimeters &&
+        m_config.fill_density.value > 0 && !perimeter_cross)
+    {
+        return std::make_pair(false, false);
+    }
+
+    // Do the retraction but skip lifting Z if no perimeter has been crossed
+    // and the option is enabled.
+    if (true && !perimeter_cross) {
+        return std::make_pair(true, false);
+    }
+
+    // Do a full retraction with Z lift
+    return std::make_pair(true, true);
 }
 
-std::string GCode::retract(bool toolchange)
+std::string GCode::retract(bool toolchange, bool lift_z)
 {
     std::string gcode;
 
@@ -3307,8 +3326,11 @@ std::string GCode::retract(bool toolchange)
     gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
 
     gcode += m_writer.reset_e();
-    if (m_writer.extruder()->retract_length() > 0 || m_config.use_firmware_retraction)
-        gcode += m_writer.lift();
+    if (m_writer.extruder()->retract_length() > 0 || m_config.use_firmware_retraction) {
+        if (lift_z) {
+            gcode += m_writer.lift();
+        }
+    }
 
     return gcode;
 }
