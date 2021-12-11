@@ -2027,6 +2027,12 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("only_lift_z_when_crossing_perimeters", coBool);
+    def->label = L("Only lift Z when crossing perimeters");
+    def->tooltip = L("Disables lifting Z (if enabled) when the travel path does not exceed the upper layer's perimeters. ");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("ooze_prevention", coBool);
     def->label = L("Enable");
     // TRN PrintSettings: Enable ooze prevention
