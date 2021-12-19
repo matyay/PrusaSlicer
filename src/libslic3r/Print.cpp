@@ -114,7 +114,7 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
         "max_volumetric_extrusion_rate_slope_negative",
         "notes",
         "only_retract_when_crossing_perimeters",
-        "only_lift_z_when_crossing_perimeters",
+        "skip_lift_z_when_not_crossing_perimeters",
         "output_filename_format",
         "perimeter_acceleration",
         "post_process",
