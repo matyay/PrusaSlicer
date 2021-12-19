@@ -345,6 +345,10 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     toggle_field("min_feature_size", have_arachne);
     toggle_field("min_bead_width", have_arachne);
     toggle_field("thin_walls", !have_arachne);
+
+    bool have_only_retract_when_crossing_perimeters = config->opt_bool("only_retract_when_crossing_perimeters");
+    for (auto el : { "skip_lift_z_when_not_crossing_perimeters" })
+        toggle_field(el, !have_only_retract_when_crossing_perimeters);
 }
 
 void ConfigManipulation::update_print_sla_config(DynamicPrintConfig* config, const bool is_global_config/* = false*/)
