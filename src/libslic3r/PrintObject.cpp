@@ -686,6 +686,7 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "support_material_interface_speed"
             || opt_key == "bridge_speed"
             || opt_key == "external_perimeter_speed"
+            || opt_key == "overhang_perimeter_speed"
             || opt_key == "infill_speed"
             || opt_key == "perimeter_speed"
             || opt_key == "small_perimeter_speed"
