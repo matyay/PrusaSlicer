@@ -202,6 +202,13 @@ enum TiltSpeeds : int {
     tsMove8000,
 };
 
+enum SkipLiftZWhenNotCrossingPerimeters {
+    slzNever,
+    slzInternal,
+    slzInternalAndBottom,
+    slzAlways
+};
+
 #define CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(NAME) \
     template<> const t_config_enum_names& ConfigOptionEnum<NAME>::get_enum_names(); \
     template<> const t_config_enum_values& ConfigOptionEnum<NAME>::get_enum_values();
@@ -230,6 +237,7 @@ CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(GCodeThumbnailsFormat)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(ForwardCompatibilitySubstitutionRule)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(PerimeterGeneratorType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(TopOnePerimeterType)
+CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(SkipLiftZWhenNotCrossingPerimeters)
 
 #undef CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS
 
@@ -895,6 +903,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionString,             notes))
     ((ConfigOptionFloats,             nozzle_diameter))
     ((ConfigOptionBool,               only_retract_when_crossing_perimeters))
+    ((ConfigOptionEnum<SkipLiftZWhenNotCrossingPerimeters>, skip_lift_z_when_not_crossing_perimeters))
     ((ConfigOptionBool,               ooze_prevention))
     ((ConfigOptionString,             output_filename_format))
     ((ConfigOptionFloat,              perimeter_acceleration))

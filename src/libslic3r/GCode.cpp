@@ -3583,11 +3583,14 @@ std::string GCodeGenerator::generate_travel_gcode(
     return gcode;
 }
 
-bool GCodeGenerator::needs_retraction(const Polyline &travel, ExtrusionRole role)
+std::pair<bool, bool> GCodeGenerator::needs_retraction(const Polyline &travel, ExtrusionRole role)
 {
+    /*  Returns two boolean values. The first indicated whether a retraction is
+        needed while the second while lifting the extruder is needed */
+
     if (! m_writer.extruder() || travel.length() < scale_(EXTRUDER_CONFIG(retract_before_travel))) {
         // skip retraction if the move is shorter than the configured threshold
-        return false;
+        return std::make_pair(false, false);
     }
 
     if (role == ExtrusionRole::SupportMaterial)
@@ -3605,21 +3608,61 @@ bool GCodeGenerator::needs_retraction(const Polyline &travel, ExtrusionRole role
                         // skip retraction if this is a travel move inside a support material island
                         //FIXME not retracting over a long path may cause oozing, which in turn may result in missing material
                         // at the end of the extrusion path!
-                        return false;
+                        return std::make_pair(false, false);
                     // Not sure whether updating the boudning box isn't too expensive.
                     //bbox_travel = get_extents(trimmed);
                 }
         }
 
-    if (m_config.only_retract_when_crossing_perimeters && m_layer != nullptr &&
-        m_config.fill_density.value > 0 && m_retract_when_crossing_perimeters.travel_inside_internal_regions(*m_layer, travel))
-        // Skip retraction if travel is contained in an internal slice *and*
-        // internal infill is enabled (so that stringing is entirely not visible).
-        //FIXME any_internal_region_slice_contains() is potentionally very slow, it shall test for the bounding boxes first.
-        return false;
+    // Check if the travel move is contained to a closed surface of the layer
+    // needed for any of the retraction options. If not then assume that it is
+    // not. Do the check only if relevant options are enabled.
+    // FIXME any_region_slice_contains() is potentionally very slow, it shall test for the bounding boxes first.
+    bool contained = false;
+    SurfaceType surface_type = stCount;
+    if ((m_config.only_retract_when_crossing_perimeters ||
+         m_config.skip_lift_z_when_not_crossing_perimeters != SkipLiftZWhenNotCrossingPerimeters::slzNever
+        ) && m_layer != nullptr)
+    {
+        auto res = m_layer->any_region_slice_contains(travel);
+        std::tie(contained, surface_type) = res;
+    }
 
-    // retract if only_retract_when_crossing_perimeters is disabled or doesn't apply
-    return true;
+    // Skip retraction if travel is contained in an internal slice *and*
+    // internal infill is enabled (so that stringing is entirely not visible).
+    if (m_config.only_retract_when_crossing_perimeters &&
+        m_config.fill_density.value > 0 && contained)
+    {
+        // Skip only for internal surfaces
+        if (surface_type != stTop && surface_type != stBottom) {
+            return std::make_pair(false, false);
+        }
+    }
+
+    // Do the retraction but skip lifting Z if no perimeter has been crossed
+    // and the option is enabled.
+    if (m_config.skip_lift_z_when_not_crossing_perimeters != SkipLiftZWhenNotCrossingPerimeters::slzNever &&
+        contained)
+    {
+        switch (m_config.skip_lift_z_when_not_crossing_perimeters)
+        {
+        case SkipLiftZWhenNotCrossingPerimeters::slzInternal: // Skip only for internal surfaces
+            if (surface_type != stTop && surface_type != stBottom)
+                return std::make_pair(true, false);
+            break;
+        case SkipLiftZWhenNotCrossingPerimeters::slzInternalAndBottom: // Skip only for internal and bottom surfaces
+            if (surface_type != stTop)
+                return std::make_pair(true, false);
+            break;
+        case SkipLiftZWhenNotCrossingPerimeters::slzAlways: // Always
+            return std::make_pair(true, false);
+        default:
+            break;
+        }
+    }
+
+    // Do a full retraction with Z lift
+    return std::make_pair(true, true);
 }
 
 Polyline GCodeGenerator::generate_travel_xy_path(
@@ -3673,13 +3716,14 @@ std::string GCodeGenerator::travel_to(
     // check whether a straight travel move would need retraction
 
     bool could_be_wipe_disabled {false};
-    bool needs_retraction = this->needs_retraction(Polyline{start_point, end_point}, role);
+    bool needs_retraction;
+    bool needs_lift_z;
+
+    std::tie(needs_retraction, needs_lift_z) = this->needs_retraction(Polyline{start_point, end_point}, role);
 
     Polyline xy_path{generate_travel_xy_path(
         start_point, end_point, needs_retraction, could_be_wipe_disabled
     )};
-
-    needs_retraction = this->needs_retraction(xy_path, role);
 
     std::string wipe_retract_gcode{};
     if (needs_retraction) {
@@ -3703,7 +3747,8 @@ std::string GCodeGenerator::travel_to(
 
     const unsigned extruder_id = this->m_writer.extruder()->id();
     const double retract_length = this->m_config.retract_length.get_at(extruder_id);
-    bool can_be_flat{!needs_retraction || retract_length == 0};
+
+    bool can_be_flat{!needs_retraction || retract_length == 0 || !needs_lift_z};
     const double initial_elevation = this->m_last_layer_z;
 
     const double upper_limit = this->m_config.retract_lift_below.get_at(extruder_id);

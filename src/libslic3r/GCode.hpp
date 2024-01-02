@@ -346,7 +346,7 @@ private:
 
     std::string travel_to_first_position(const Vec3crd& point, const double from_z, const ExtrusionRole role, const std::function<std::string()>& insert_gcode);
 
-    bool            needs_retraction(const Polyline &travel, ExtrusionRole role = ExtrusionRole::None);
+    std::pair<bool,bool> needs_retraction(const Polyline &travel, ExtrusionRole role = ExtrusionRole::None);
 
     std::string     retract_and_wipe(bool toolchange = false, bool reset_e = true);
     std::string     unretract() { return m_writer.unretract(); }
