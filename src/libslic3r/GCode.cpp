@@ -3834,7 +3834,7 @@ std::string GCodeGenerator::set_extruder(unsigned int extruder_id, double print_
         gcode += m_ooze_prevention.post_toolchange(*this);
 
     // The position is now known after the tool change.
-    this->m_last_pos_defined = false;
+    //this->m_last_pos_defined = false;
 
     return gcode;
 }
