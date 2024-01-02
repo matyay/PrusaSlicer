@@ -430,7 +430,7 @@ private:
         bool& could_be_wipe_disabled
     );
     std::string     travel_to(const Point &point, ExtrusionRole role, std::string comment);
-    bool            needs_retraction(const Polyline &travel, ExtrusionRole role = ExtrusionRole::None);
+    std::pair<bool,bool> needs_retraction(const Polyline &travel, ExtrusionRole role = ExtrusionRole::None);
 
     std::string     retract_and_wipe(bool toolchange = false);
     std::string     unretract() { return m_writer.unretract(); }

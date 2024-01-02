@@ -32,6 +32,14 @@ public:
         for (const Surface &surface : this->surfaces) if (surface.is_bottom() && surface.expolygon.contains(item)) return true;
         return false;
     }
+    template <class T> std::pair<bool, SurfaceType> any_contains (const T& item) const {
+        for (const Surface &surface : this->surfaces) {
+            if (surface.expolygon.contains(item)) {
+                return std::make_pair(true, surface.surface_type);
+            }
+        }
+        return std::make_pair(false, stCount);
+    }
     SurfacesPtr filter_by_type(const SurfaceType type) const;
     SurfacesPtr filter_by_types(std::initializer_list<SurfaceType> types) const;
     void keep_type(const SurfaceType type);
