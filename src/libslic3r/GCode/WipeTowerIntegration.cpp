@@ -56,7 +56,7 @@ std::string WipeTowerIntegration::append_tcr(GCodeGenerator &gcodegen, const Wip
                                          || ! needs_toolchange   // this is just finishing the tower with no toolchange
                                          || is_ramming
                                          || will_go_down);       // don't dig into the print
-    if (should_travel_to_tower) {
+    if (1/*should_travel_to_tower*/) {
         const Point xy_point = wipe_tower_point_to_object_point(gcodegen, start_pos);
         gcode += gcodegen.m_label_objects.maybe_stop_instance();
         gcode += gcodegen.retract_and_wipe();
