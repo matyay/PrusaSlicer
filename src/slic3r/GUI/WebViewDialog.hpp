@@ -6,6 +6,7 @@
 #include <map>
 #include <wx/wx.h>
 #include <wx/event.h>
+#include <wx/webview.h>
 
 #include "UserAccountSession.hpp"
 

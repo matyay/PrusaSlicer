@@ -4,6 +4,7 @@
 #include "UserAccountSession.hpp"
 #include "Event.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include <wx/wx.h>
 
 #include <queue>
 #include <condition_variable>
