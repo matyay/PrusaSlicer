@@ -27,6 +27,8 @@ else ()
     set(_wx_secretstore "-DwxUSE_SECRETSTORE=ON")
 endif ()
 
+set(PATCH_FILE ${CMAKE_CURRENT_SOURCE_DIR}/+wxWidgets/0001-webkitgtk-version.patch)
+
 add_cmake_project(wxWidgets
     URL https://github.com/prusa3d/wxWidgets/archive/78aa2dc0ea7ce99dc19adc1140f74c3e2e3f3a26.zip
     URL_HASH SHA256=94b7d972373503e380e5a8b0ca63b1ccb956da4006402298dd89a0c5c7041b1e
@@ -54,6 +56,7 @@ add_cmake_project(wxWidgets
         -DwxUSE_WEBREQUEST=OFF
         ${_wx_webview}
         ${_wx_secretstore}
+        PATCH_COMMAND patch -s -p0 < ${PATCH_FILE}
 )
 
 set(DEP_wxWidgets_DEPENDS ZLIB PNG EXPAT JPEG NanoSVG)

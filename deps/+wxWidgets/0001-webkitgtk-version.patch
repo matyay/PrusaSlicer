@@ -1,0 +1,66 @@
+--- build/cmake/modules/FindWEBKIT2.cmake	2024-08-16 19:08:31.577927603 +0200
++++ build/cmake/modules/FindWEBKIT2.cmake.new	2024-08-16 19:16:01.856892448 +0200
+@@ -5,7 +5,7 @@
+ #  WEBKIT2_LIBRARIES   - List of libraries when using Webkit2.
+ #  WEBKIT2_FOUND       - True if Webkit2 found.
+ 
+-SET( WEBKIT2_VERSION 4.0)
++SET( WEBKIT2_VERSION 4.1)
+ 
+ set(WEBKIT2_INCLUDE_DIR WEBKIT2_INCLUDE_DIR-NOTFOUND)
+ set(WEBKIT2_LIBRARY WEBKIT2_LIBRARY-NOTFOUND)
+
+--- build/cmake/modules/FindLIBSOUP.cmake	2024-08-16 19:22:55.417205196 +0200
++++ build/cmake/modules/FindLIBSOUP.cmake.new	2024-08-16 20:25:57.201101860 +0200
+@@ -32,18 +32,18 @@
+ # .pc file, so we need to rely on PC_LIBSOUP_VERSION and REQUIRE the .pc file
+ # to be found.
+ FIND_PACKAGE(PkgConfig)
+-PKG_CHECK_MODULES(PC_LIBSOUP QUIET libsoup-2.4)
++PKG_CHECK_MODULES(PC_LIBSOUP QUIET libsoup-3.0)
+ 
+ if(PC_LIBSOUP_FOUND)
+     FIND_PATH(LIBSOUP_INCLUDE_DIRS
+         NAMES libsoup/soup.h
+         HINTS ${PC_LIBSOUP_INCLUDEDIR}
+         ${PC_LIBSOUP_INCLUDE_DIRS}
+-        PATH_SUFFIXES libsoup-2.4
++        PATH_SUFFIXES libsoup-3.0
+         )
+ 
+     FIND_LIBRARY(LIBSOUP_LIBRARIES
+-        NAMES soup-2.4
++        NAMES soup-3.0
+         HINTS ${PC_LIBSOUP_LIBDIR}
+         ${PC_LIBSOUP_LIBRARY_DIRS}
+         )
+
+--- src/gtk/webview_webkit2.cpp	2024-08-16 20:46:58.012440389 +0200
++++ src/gtk/webview_webkit2.cpp.new	2024-08-16 20:56:39.923582591 +0200
+@@ -166,24 +166,15 @@
+     {
+         switch (error->code)
+         {
+-            case SOUP_STATUS_CANCELLED:
++            case G_IO_ERROR_CANCELLED:
+                 type = wxWEBVIEW_NAV_ERR_USER_CANCELLED;
+                 break;
+ 
+-            case SOUP_STATUS_CANT_RESOLVE:
+             case SOUP_STATUS_NOT_FOUND:
+                 type = wxWEBVIEW_NAV_ERR_NOT_FOUND;
+                 break;
+ 
+-            case SOUP_STATUS_CANT_RESOLVE_PROXY:
+-            case SOUP_STATUS_CANT_CONNECT:
+-            case SOUP_STATUS_CANT_CONNECT_PROXY:
+-            case SOUP_STATUS_SSL_FAILED:
+-            case SOUP_STATUS_IO_ERROR:
+-                type = wxWEBVIEW_NAV_ERR_CONNECTION;
+-                break;
+-
+-            case SOUP_STATUS_MALFORMED:
++            case SOUP_SESSION_ERROR_PARSING:
+                 type = wxWEBVIEW_NAV_ERR_REQUEST;
+                 break;
+ 
